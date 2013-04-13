@@ -1,0 +1,105 @@
+{"name":"blastx-ranger-ncbi-db",
+ "parallelism":"parallel",
+ "version":"2.2.26",
+ "helpURI":"http://blast.ncbi.nlm.nih.gov/",
+ "label":"BLASTX",
+ "shortDescription":"High-throughput BLASTX on TACC Ranger",
+ "longDescription":"Intended for metagenome analysis or post-assembly contig annotation. Uses iPlant-maintained NCBI database mirror.",
+ "author":"Matthew Vaughn",
+ "tags":[],
+ "ontology":["http://sswapmeet.sswap.info/agave/apps/Application", "http://sswapmeet.sswap.info/sequenceServices/BLASTX"],
+ "executionHost":"ranger.tacc.teragrid.org",
+ "executionType":"HPC",
+ "deploymentPath":"/iplant/home/vaughn/applications/blast-2.2.26/ranger",
+ "templatePath":"blastx.sge",
+ "testPath":"blastx_test.sge",
+ "checkponumberable":"false",
+ "modules":["purge", "load TACC", "load irods", "load launcher", "swap pgi gcc"],
+ "inputs":[
+    {"id":"query",
+     "value":
+        {"default":"",
+         "validator":"",
+         "required":true,
+         "visible":true},
+     "details":
+        {"label":"Multi-FASTA file containing BLAST queries",
+         "description":""},
+     "semantics":
+        {"ontology":["http://sswapmeet.sswap.info/mime/text/X-multiFasta"],
+         "minCardinality":1,
+         "fileTypes":["fasta-0"]}}],
+ "parameters":[
+     {"id":"db",
+     "value":
+        {"default":"nr",
+         "type":"string",
+         "validator":"nr|refseq_protein",
+         "visible":true,
+         "required":true},
+     "details":
+        {"label":"NCBI database name",
+         "description":"Source: ftp://ftp.ncbi.nih.gov/blast/db"},
+     "semantics":
+        {"ontology":["xs:string"]}},
+    {"id":"matrix",
+     "value":
+        {"default":"BLOSUM62",
+         "type":"string",
+         "validator":"BLOSUM45|BLOSUM62|BLOSUM80|PAM30|PAM70",
+         "visible":true,
+         "required":false},
+     "details":
+        {"label":"Scoring matrix name",
+         "description":""},
+     "semantics":
+        {"ontology":["xs:string"]}},
+    {"id":"outfmt",
+     "value":
+        {"default":0,
+         "type":"number",
+         "validator":"",
+         "visible":true,
+         "required":false},
+     "details":
+        {"label":"Alignment output format",
+         "description":""},
+     "semantics":
+        {"ontology":["xs:integer"]}},
+    {"id":"evalue",
+     "value":
+        {"default":0.001,
+         "type":"number",
+         "validator":"",
+         "visible":true,
+         "required":false},
+     "details":
+        {"label":"Minimum e-value for result",
+         "description":""},
+     "semantics":
+        {"ontology":["xs:float"]}},
+    {"id":"max_target_seqs",
+     "value":
+        {"default":"",
+         "type":"number",
+         "validator":"\\d++",
+         "visible":true,
+         "required":false},
+     "details":
+        {"label":"Maximum number of aligned sequences to keep",
+         "description":"Replaces functionality of num_descriptions and num_alignments"},
+     "semantics":
+        {"ontology":["xs:integer"]}}],
+ "outputs":[
+    {"id":"blastReportArchive",
+     "value":
+        {"default":"blast_out.tbz2",
+         "validator":"blast_out.tbz2"},
+     "details":
+        {"label":"Tarred, bzipped directory of BLASTX results files",
+         "description":"Be careful expanding this, as there may be a lot of files if you submitted a query with a lot of sequences."},
+     "semantics":
+        {"ontology":["http://sswapmeet.sswap.info/mime/application/X-bzip2"],
+         "minCardinality":"1",
+         "maxCardinality":"1",
+         "fileType":"raw-0"}}]}

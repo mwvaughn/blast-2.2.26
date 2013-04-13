@@ -1,0 +1,82 @@
+# BLASTX against NCBI databases using Ranger
+# Dependencies:
+## TACC launcher, gcc 4.4x GLIBC
+## NCBI databases housed in iplant's $WORK/resources/blast-2.2.26/db/
+
+# This is the $WORK directory for the iplant user
+# Source: update_blastdb.sh in $SCRATCH/blast-db
+#
+DB_DIR="$WORK/resources/blast-2.2.26/db"
+
+# Unpack bin directory
+tar -zxf bin.tgz
+PATH=${PATH}:bin:bin/ncbi-blast-2.2.26+/bin
+
+# Local BLAST directory after unpacking
+BLAST="bin/ncbi-blast-2.2.26+/bin/"
+# Default name for blast work directory
+DIR="blast_out"
+RECORDS=1000
+THREADS=16
+OWD=$PWD
+
+cache_binary $PWD ${BLAST}blastx
+
+# User params
+# Multi-FASTA (MFA) file (query)
+MFA_FILE=
+if [ -n "${query}" ]
+then
+	iget -fVT ${query} .
+	MFA_FILE=$(basename ${query})
+fi
+
+# Check that the query file contains no more than 512,000 sequences
+SEQCOUNT=$(egrep -c "^>" ${MFA_FILE})
+if [ $SEQCOUNT -gt 512000 ]
+then
+
+# Write an error message to a file that will be returned to the user
+touch 00-YOUR-BLAST-FAILED-00
+echo "You have tried to submit ${SEQCOUNT} sequences to BLASTX, which exceed the allowed limit of 512,000" > 00-YOUR-BLAST-FAILED-00
+
+else
+
+ARGS="-num_threads ${THREADS} -db ${DB_DIR}/${db}"
+
+if [ -n "${evalue}" ]; then ARGS="$ARGS -evalue ${evalue}"; fi
+if [ -n "${word_size}" ]; then ARGS="$ARGS -word_size ${word_size}"; fi
+if [ -n "${gapopen}" ]; then ARGS="$ARGS -gapopen ${gapopen}"; fi
+if [ -n "${gapextend}" ]; then ARGS="$ARGS -gapextend ${gapextend}"; fi
+if [ -n "${frame_shift_penalty}" ]; then ARGS="$ARGS -frame_shift_penalty ${frame_shift_penalty}"; fi
+if [ -n "${max_intron_length}" ]; then ARGS="$ARGS -max_intron_length ${max_intron_length}"; fi
+if [ -n "${matrix}" ]; then ARGS="$ARGS -matrix ${matrix}"; fi
+if [ -n "${threshold}" ]; then ARGS="$ARGS -threshold ${threshold}"; fi
+if [ -n "${outfmt}" ]; then ARGS="$ARGS -outfmt ${outfmt}"; fi
+if [ -n "${max_target_seqs}" ]; then ARGS="$ARGS -max_target_seqs ${max_target_seqs}"; fi
+if [ "${show_gis}" -eq "1" ]; then ARGS="$ARGS -show_gis"; fi
+
+# Split input fasta file by record count
+bin/splitfasta.pl -f ${MFA_FILE} -o "${DIR}" -r $RECORDS -s "seq"
+
+# Be double-sure there was no pre-existing paramlist
+rm -f blast.paramlist && touch blast.paramlist
+
+for C in `find ${DIR} -size +0c -type f`
+do
+echo "time ${BLAST}blastx -out ${C}.blastx -query ${C} ${ARGS}" >> blast.paramlist
+done
+
+date
+EXECUTABLE=$TACC_LAUNCHER_DIR/init_launcher
+time $TACC_LAUNCHER_DIR/paramrun $EXECUTABLE blast.paramlist
+date
+
+# Tar up and bzip the results, ignoring the sequence record files
+tar -cjvf ${DIR}.tbz2 ${DIR}/*.blastx && rm -rf ${DIR}
+rm -rf ${FASTA}
+rm -rf bin
+rm -rf blast.paramlist
+
+fi
+
